@@ -42,6 +42,7 @@
 #include <sys/types.h>		/* for wait() */
 #include <sys/wait.h>		/* for wait() */
 #include <stdlib.h>
+#include <signal.h>
 /*
  * Pergunta 1: o que o compilador gcc faz com o arquivo .h, cujo nome aparece ap�s o include?
  */
@@ -103,12 +104,17 @@
  * SLEEP_TIME corresponde a quantidade de tempo para ficar bloqueado.
  */
 
-#define SLEEP_TIME 400
+#define SLEEP_TIME 1000
 
 /*
  * MICRO_PER_SECOND define o numero de microsegundos em um segundo
  */
-
+int N=0;
+void tratamento_de_sinal(int sig){
+	N++;
+	printf("%d",N);
+	return;
+}
 
 /*
  * Programa Principal. Contem tanto o codigo para o processo pai como
@@ -131,13 +137,17 @@ int main( int argc, char *argv[] )
       /*
        * Outras variaveis importantes
        */
+		
+	(void) signal (SIGUSR1,tratamento_de_sinal);
+	
+	
 
    	char buffer[6];
 	sprintf(buffer,"%d",SLEEP_TIME);
 
       int count;
 	int child_no;
-	char *args[]={"./filho",buffer}; 
+	int pid[5];
 
 	/*
 	 * Criacao dos processos filhos
@@ -150,25 +160,30 @@ int main( int argc, char *argv[] )
 		} else {
 			break;
 		}
-	}
-
-
-	/*
-	 * Verifica-se rtn para determinar se o processo eh pai ou filho
-	 */
-		printf("Passou aqui1");
-	if( rtn == 0 ) {
-		printf("Passou aqui2");
-		 execvp(args[0],args);
-	
-	} else {
-		/*
-		 * Sou pai, aguardo o termino dos filhos
-		 */
-		for( count = 0; count < NO_OF_CHILDREN; count++ ) {
-			wait(NULL);
+		if(rtn != 0){
+			pid[count] = rtn; //Armazena os PIDs		
 		}
 	}
 
+
+	if(rtn == 0){
+		execl("filho",buffer,NULL);
+	}
+	else {
+		/*
+		 * Sou pai, aguardo o termino dos filhos
+		 */
+		while(N<5);	
+		for( count = 0; count < NO_OF_CHILDREN; count++ ) {	
+			if(kill(pid[count],SIGKILL) == 0){	
+				printf("\nfilho -> PID %d, morto com sucesso",pid[count]);	//se o kill retornar que deu certo
+			}
+			else{		//se o kill retornar que deu errado
+				printf("\nErro ao matar o filho %d",count+1);
+			}
+	}
+		wait(NULL);
+	}	
+	printf("\n\n\n");
 	exit(0);
 }
