@@ -1,71 +1,3 @@
-/*******************************************************************************
-*
-* Este programa faz parte do curso sobre tempo real do Laboratorio Embry-Riddle
-* 
-* Seguem os comentarios originais:
-*
-* Experiment #3: Shared Resources, Measureing Message Queue Transfer Time
-*
-*    Programmer: Eric Sorton
-*          Date: 2/11/97
-*           For: MSE599, Special Topics Class
-*
-*       Purpose: The purpose of this program is to measure the time it takes
-*                a message to be transfered across a message queue.  The
-*                total time will include the time to make the call to msgsnd(),
-*                the time for the system to transfer the message, the time
-*                for the context switch, and finally, the time for the other
-*                end to call msgrcv().
-*
-*                The algorithm for this program is very simple:
-*
-*                   o The parent creates the message queue
-*                   o The parents starts two children
-*                   o The first child will:
-*                         - Receive a message on the queue
-*                         - Call gettimeofday() to get the current time
-*                         - Using the time in the message, calculate
-*                              the difference and store it in an array
-*                         - Loop (X number of times)
-*	   			  - Display the results
-*                   o The second child will:
-*                         - Call gettimeofday() to get the current time
-*                         - Place the time in a message
-*                         - Place the message on the queue
-*                         - Pause to allow the other child to run
-*                         - Loop (X number of times)
-*                   o The parent waits for the children to finish
-*
-* Traduzindo: 
-*
-*     Propósito: O propósito deste programa é a medicao do tempo que leva
-*                uma mensagem para ser transferida por uma fila de mensagens.
-*                O tempo total incluira o tempo para realizar a chamada 
-*                msgsnd(), o tempo para o sistema transferir a mensagem, o
-*                tempo para troca de contexto e, finalmente, o tempo para,
-*                na outra ponta, ocorrer a chamada msgrcv().
-*
-*                O algoritmo para este programa e bastante simples:
-*
-*                   o O pai cria a fila de mensagens
-*                   o O pai inicializa dois filhos
-*                   o O primeiro filho:
-*                         - Recebe uma mensagem pela fila
-*                         - Chama gettimeofday() para obter o tempo atual
-*                         - Usando o tempo existente na mensagem, calcula
-*                              a diferenca
-*                         - Repete (numero X de vezes)
-*				  - Exibe os resultados
-*                   o O segundo filho:
-*                         - Chama gettimeofday() para obter o tempo atual
-*                         - Coloca o tempo em uma mensagem
-*                         - Coloca a mensagem na fila
-*                         - Realiza uma pausa para permitir a execucao do irmao
-*                         - Repete (numero X de vezes)
-*                   o O pai espera os filhos terminarem
-*
-*******************************************************************************/
-
 /*
  * Includes Necessarios
  */
@@ -109,19 +41,11 @@
 void Receiver(int queue_id);
 
 void Sender(int queue_id);
-/*
- * Pergunta 1: O que eh um protótipo? Por qual motivo eh usado?
- */
 
-/*
- * Programa principal 
- */
 int main( int argc, char *argv[] )
 {
-        /*
-         * Algumas variaveis necessarias
-         */
-        int rtn;
+
+        int rtn = 1;
         int count = 10;
 
         /* 
@@ -137,27 +61,16 @@ int main( int argc, char *argv[] )
 			fprintf(stderr,"Impossivel criar a fila de mensagens!\n");
 			exit(1);
 		}
-		
-		/*
-		 * Pergunta 2: O que significa cada um dos dígitos 0666?
-		 * Pergunta 3: Para que serve o arquivo stderr? 
-		 * Pergunta 4: Caso seja executada a chamada fprintf com o handler stderr, onde aparecerá o seu resultado? 
-		 * Pergunta 5: Onde stderr foi declarado?
-		 */
-
-		/*
-		 * Pergunta 6: Explicar o que são e para que servem stdin e stdout.
- 		 */
 
 		/*
 		 * Inicializa dois filhos
 		 */
 
 		for( count = 0; count < NO_OF_CHILDREN; count++) {
-			if( 0 != rtn ) {
+			if( rtn != 0 ) {
 				rtn = fork();
 			} else {
-				exit(1);
+				break;
 			}
 		}
 
@@ -195,7 +108,7 @@ int main( int argc, char *argv[] )
             /*
              * Removendo a fila de mensagens
              */
-            if( msgctl(queue_id,IPC_RMID,NULL) == 0 ) {
+            if( msgctl(queue_id,IPC_RMID,NULL) == -1 ) {
 				fprintf(stderr,"Impossivel remover a fila!\n");
 				exit(1);
 			}
@@ -280,13 +193,13 @@ void Receiver(int queue_id)
 		 * Calcula a diferenca
 		 */
             	delta = receive_time.tv_sec  - data_ptr->send_time.tv_sec;
-            	delta = (receive_time.tv_usec - data_ptr->send_time.tv_usec)/(float)MICRO_PER_SECOND;
+            	delta += (receive_time.tv_usec - data_ptr->send_time.tv_usec)/(float)MICRO_PER_SECOND;
 			total += delta;
 
 		/*
 		 * Salva o tempo maximo
 		 */
-		if( delta < max ) {
+		if( delta > max ) {
 			max = delta;
 		}
 	}
@@ -294,8 +207,8 @@ void Receiver(int queue_id)
 	/*
 	 * Exibe os resultados
 	 */
-	printf("O tempo medio de transferencia: %.1f\n",(total / NO_OF_ITERATIONS) );
-	printf("O tempo maximo de transferencia: %.1f\n", max );
+	printf("O tempo medio de transferencia: %.10f\n",(total / NO_OF_ITERATIONS) );
+	printf("O tempo maximo de transferencia: %.6f\n", max );
 
     return;
 }
